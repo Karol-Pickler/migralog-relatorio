@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MigraLog — Probe do fragment</title>
+  <style>
+    body { font-family: -apple-system, system-ui, sans-serif; margin: 0; padding: 24px; color: #14313c; background: #f5f7f7; }
+    .ok { background: #0F5C57; color: #fff; padding: 14px 18px; border-radius: 10px; font-weight: 700; font-size: 18px; }
+    .card { background: #fff; border: 1px solid #d8e2e1; border-radius: 12px; padding: 18px; margin-top: 16px; }
+    .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eef2f1; }
+    .row:last-child { border-bottom: 0; }
+    .k { color: #5a6e6c; }
+    .v { font-weight: 700; }
+    pre { background: #0b1f24; color: #9fd86f; padding: 12px; border-radius: 8px; overflow-x: auto; font-size: 12px; }
+    .err { color: #b00020; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <div class="ok" id="jsFlag">⏳ Carregando… (se você está vendo isto sem mudar, o JS NÃO rodou)</div>
+  <div class="card" id="content"></div>
+
+  <script>
+    // PROBE do GATE B: prova que o webview do Zepp app executa JS e lê location.hash.
+    // O #fragment NÃO é enviado ao servidor — os dados ficam só no cliente.
+    (function () {
+      var flag = document.getElementById('jsFlag');
+      var content = document.getElementById('content');
+      flag.textContent = '✓ JS executou no webview';
+
+      var raw = (location.hash || '').replace(/^#/, '');
+      if (!raw) {
+        content.innerHTML = '<p class="err">Sem dados no #fragment. URL deve terminar com #&lt;json codificado&gt;.</p>';
+        return;
+      }
+      try {
+        var data = JSON.parse(decodeURIComponent(raw));
+        var rows = '';
+        for (var k in data) {
+          if (Object.prototype.hasOwnProperty.call(data, k)) {
+            rows += '<div class="row"><span class="k">' + k + '</span><span class="v">' + String(data[k]) + '</span></div>';
+          }
+        }
+        content.innerHTML =
+          '<h2 style="margin-top:0">Dados lidos do fragment</h2>' + rows +
+          '<h3>JSON bruto</h3><pre>' + JSON.stringify(data, null, 2) + '</pre>';
+      } catch (e) {
+        content.innerHTML = '<p class="err">Falha ao decodificar o fragment: ' + e.message + '</p>' +
+          '<pre>' + raw + '</pre>';
+      }
+    })();
+  </script>
+</body>
+</html>
