@@ -36,7 +36,7 @@ function episodeTable(d) {
         const med = (e.medications || []).join(', ') || '—'
         return (
           '<tr class="ep-row">' +
-          '<td class="num">' + pad2(e.day) + '/' + pad2(d.periodo.mesFoco.month) + '</td>' +
+          '<td class="num">' + pad2(e.day) + '/' + pad2(d.periodo.mesFoco.month) + (e.emergencia ? ' <b class="emergencia-tag" style="color:#C25B47">PS</b>' : '') + '</td>' +
           '<td class="num">' + pad2(e.hour) + ':' + pad2(e.minute) + '</td>' +
           '<td><span class="pill" style="background:' + pillBg[f] + ';color:' + pillFg[f] + '">' + e.intensity + '</span></td>' +
           '<td>' + esc(e.location || '—') + '</td>' +
@@ -72,6 +72,11 @@ function renderPagina1(d) {
   ].map(([label, value, cls]) =>
     '<div class="kpi"><div class="label">' + label + '</div><div class="value ' + cls + '">' + value + '</div></div>',
   ).join('')
+
+  const nEmerg = c.emergencias || 0
+  const seloEmerg = nEmerg > 0
+    ? '<div class="insight emergencia-selo" style="margin-top:14px"><div class="icn">🏥</div><div class="body"><span class="h">Atendimento de emergência</span><b>' + nEmerg + '</b> ' + (nEmerg === 1 ? 'crise exigiu' : 'crises exigiram') + ' atendimento de emergência (PS/hospital) nos últimos 6 meses.</div></div>'
+    : ''
 
   // gráfico de barras: crises por mês
   const maxCrises = Math.max(1, ...c.porMes.map((m) => m.crises))
@@ -111,7 +116,7 @@ function renderPagina1(d) {
       '</div>' +
       '<div class="sec" style="margin-top:22px;">' +
         '<div class="sec-head"><h2>Resumo consolidado</h2><div class="rule"></div><span class="tag">6 meses</span></div>' +
-        '<div class="kpis">' + kpis + '</div>' +
+        '<div class="kpis">' + kpis + '</div>' + seloEmerg +
       '</div>' +
       '<div class="sec">' +
         '<div class="sec-head"><h2>Comparativo dos últimos 6 meses</h2><div class="rule"></div></div>' +
@@ -148,17 +153,20 @@ function renderPagina2(d) {
         return (
           '<line class="lollipop" x1="' + x + '" y1="180" x2="' + x + '" y2="' + y + '" stroke="' + cor + '" stroke-width="2.5" stroke-linecap="round"/>' +
           '<circle cx="' + x + '" cy="' + y + '" r="6.5" fill="' + cor + '"/>' +
+          (e.emergencia ? '<circle class="emergencia-ring" cx="' + x + '" cy="' + y + '" r="10.5" fill="none" stroke="#0A3F3B" stroke-width="2"/>' : '') +
           '<text x="' + x + '" y="' + (Number(y) + 3.5).toFixed(1) + '" font-size="9.5" font-weight="700" fill="#fff" text-anchor="middle">' + e.intensity + '</text>' +
           '<text class="lolli-day" x="' + x + '" y="198" font-size="9.5" fill="#6E6C60" text-anchor="middle">' + pad2(e.day) + '</text>'
         )
       }).join('')
     : ''
+  const hasEmerg = mf.crises.some((e) => e.emergencia)
   const legenda =
     '<div class="legend">' +
     '<span><i style="background:#6FA88E"></i>Leve (1–4)</span>' +
     '<span><i style="background:#E0A458"></i>Moderada (5–6)</span>' +
     '<span><i style="background:#D08440"></i>Forte (7–8)</span>' +
     '<span><i style="background:#C25B47"></i>Muito forte (9–10)</span>' +
+    (hasEmerg ? '<span><i style="background:transparent;border:2px solid #0A3F3B;border-radius:50%"></i>Atendimento de emergência</span>' : '') +
     '</div>'
   const lolliSvg = mf.crises.length
     ? '<svg viewBox="0 0 700 210"><line x1="34" y1="180" x2="680" y2="180" stroke="#E1DBCC"/>' +

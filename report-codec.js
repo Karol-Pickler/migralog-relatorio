@@ -3,7 +3,7 @@
 // (episódios viram tuplas posicionais, sem repetir nomes de campo nem ts/year/month);
 // unpackReport reconstrói o objeto rico. Puras e idempotentes em dado já no formato alvo.
 
-const CR_FIELDS = ['day', 'hour', 'minute', 'intensity', 'location', 'symptoms', 'medications', 'hr', 'sleep', 'stress']
+const CR_FIELDS = ['day', 'hour', 'minute', 'intensity', 'location', 'symptoms', 'medications', 'hr', 'sleep', 'stress', 'emergencia']
 
 export function packReport(report) {
   if (!report || !report.mesFoco || !Array.isArray(report.mesFoco.crises)) return report
