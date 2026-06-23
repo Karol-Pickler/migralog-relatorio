@@ -22,10 +22,45 @@ function sevColor(i) {
   return { leve: '#6FA88E', moderada: '#E0A458', forte: '#D08440', muitoforte: '#C25B47' }[faixaOf(i)]
 }
 
-// ---- Página 1 ----
+// Tabela por episódio — mora na página 1 (preenche o espaço antes vazio).
+function episodeTable(d) {
+  const mf = d.mesFoco
+  const focoLabel = (d.periodo.mesFoco.label || '') + ' / ' + d.periodo.mesFoco.year
+  const pillBg = { leve: '#CDE3D6', moderada: '#F3E4C4', forte: '#F0D9B8', muitoforte: '#E7B6AB' }
+  const pillFg = { leve: '#2E6B4E', moderada: '#9A7A2A', forte: '#9A6418', muitoforte: '#8E2E1C' }
+
+  const rows = mf.crises.length
+    ? mf.crises.map((e) => {
+        const f = faixaOf(e.intensity)
+        const sint = (e.symptoms || []).join(', ') || '—'
+        const med = (e.medications || []).join(', ') || '—'
+        return (
+          '<tr class="ep-row">' +
+          '<td class="num">' + pad2(e.day) + '/' + pad2(d.periodo.mesFoco.month) + '</td>' +
+          '<td class="num">' + pad2(e.hour) + ':' + pad2(e.minute) + '</td>' +
+          '<td><span class="pill" style="background:' + pillBg[f] + ';color:' + pillFg[f] + '">' + e.intensity + '</span></td>' +
+          '<td>' + esc(e.location || '—') + '</td>' +
+          '<td>' + esc(sint) + '</td>' +
+          '<td>' + esc(med) + '</td>' +
+          '<td class="num">' + (e.hr || '—') + '</td>' +
+          '<td class="num">' + (e.sleep || '—') + '</td>' +
+          '<td class="num">' + (e.stress || '—') + '</td>' +
+          '</tr>'
+        )
+      }).join('')
+    : '<tr><td colspan="9" class="ps">Nenhuma crise registrada neste mês.</td></tr>'
+
+  return (
+    '<div class="sec"><div class="sec-head"><h2>Registro detalhado — ' + esc(focoLabel) + '</h2><div class="rule"></div><span class="tag">por episódio</span></div>' +
+    '<table><thead><tr><th>Data</th><th>Hora</th><th>Int.</th><th>Local</th><th>Sintomas</th><th>Medicação</th><th>FC</th><th>Sono*</th><th>Estr.</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+    '<p class="ps" style="margin-top:6px;">* Sono e estresse em índice 0–100 do relógio (não horas).</p></div>'
+  )
+}
+
+// ---- Página 1: resumo de 6 meses + tabela de episódios ----
 function renderPagina1(d) {
   const c = d.consolidado6m
-  const periodoLabel = (d.periodo.de.label || '') + ' – ' + (d.periodo.ate.label || '')
+  const periodoLabel = (d.periodo.de.label || '') + ' – ' + (d.periodo.ate.label || '') + ' ' + (d.periodo.ate.year || '')
   const mesFocoLabel = (d.periodo.mesFoco.label || '') + ' / ' + d.periodo.mesFoco.year
 
   const kpis = [
@@ -72,7 +107,7 @@ function renderPagina1(d) {
       '<div class="masthead">' +
         '<div><p class="eyebrow">Relatório clínico de acompanhamento</p>' +
         '<h1>Diário de Crises de Enxaqueca<span class="sub">Consolidação dos últimos 6 meses e detalhamento do mês corrente, com dados fisiológicos capturados pelo smartwatch.</span></h1></div>' +
-        '<div class="meta"><b>' + esc(d.paciente.nome || '—') + '</b><br>Período: ' + esc(periodoLabel) + '<br>Mês em foco: <b>' + esc(mesFocoLabel) + '</b><br>Emitido em: ' + fmtDate(d.geradoEm) + '</div>' +
+        '<div class="meta" style="flex:none;white-space:nowrap"><b>' + esc(d.paciente.nome || '—') + '</b><br>Período: ' + esc(periodoLabel) + '<br>Mês em foco: <b>' + esc(mesFocoLabel) + '</b><br>Emitido em: ' + fmtDate(d.geradoEm) + '</div>' +
       '</div>' +
       '<div class="sec" style="margin-top:22px;">' +
         '<div class="sec-head"><h2>Resumo consolidado</h2><div class="rule"></div><span class="tag">6 meses</span></div>' +
@@ -88,18 +123,10 @@ function renderPagina1(d) {
             '<polyline points="' + polyline + '" fill="none" stroke="#C25B47" stroke-width="2.5" stroke-linejoin="round"/>' + dots + '</svg></div>' +
         '</div>' +
       '</div>' +
-      '<div class="foot"><span><b>MigraLog</b> · Gerado a partir do Amazfit Bip 6</span><span>Página 1 de 3</span></div>' +
+      episodeTable(d) +
+      '<div class="foot"><span><b>MigraLog</b> · Gerado a partir do Amazfit Bip 6</span><span>Página 1 de 2</span></div>' +
     '</section>'
   )
-}
-
-export function renderReport(data) {
-  const d = Object.assign({}, unpackReport(data || {}))
-  d.paciente = d.paciente || {}
-  d.periodo = d.periodo || { de: {}, ate: {}, mesFoco: {} }
-  d.consolidado6m = d.consolidado6m || { totalCrises: 0, intensidadeMedia: 0, criseMaisForte: 0, porMes: [] }
-  d.mesFoco = d.mesFoco || { crises: [], sintomas: [], medicacoes: [], horarios: { manha: 0, tarde: 0, noite: 0 } }
-  return renderPagina1(d) + renderPagina2(d) + renderPagina3(d)
 }
 
 function hbar(nome, contagem, max, cor) {
@@ -107,6 +134,7 @@ function hbar(nome, contagem, max, cor) {
   return '<div class="hbar"><span class="hl">' + esc(nome) + '</span><span class="ht"><span class="hf" style="width:' + w + '%;background:' + cor + '"></span></span><span class="hv">' + contagem + '</span></div>'
 }
 
+// ---- Página 2: detalhamento do mês + correlação ----
 function renderPagina2(d) {
   const mf = d.mesFoco
   const focoLabel = (d.periodo.mesFoco.label || '') + ' / ' + d.periodo.mesFoco.year
@@ -120,12 +148,21 @@ function renderPagina2(d) {
         return (
           '<line class="lollipop" x1="' + x + '" y1="180" x2="' + x + '" y2="' + y + '" stroke="' + cor + '" stroke-width="2.5" stroke-linecap="round"/>' +
           '<circle cx="' + x + '" cy="' + y + '" r="6.5" fill="' + cor + '"/>' +
-          '<text x="' + x + '" y="' + (Number(y) + 3.5).toFixed(1) + '" font-size="9.5" font-weight="700" fill="#fff" text-anchor="middle">' + e.intensity + '</text>'
+          '<text x="' + x + '" y="' + (Number(y) + 3.5).toFixed(1) + '" font-size="9.5" font-weight="700" fill="#fff" text-anchor="middle">' + e.intensity + '</text>' +
+          '<text class="lolli-day" x="' + x + '" y="198" font-size="9.5" fill="#6E6C60" text-anchor="middle">' + pad2(e.day) + '</text>'
         )
       }).join('')
     : ''
+  const legenda =
+    '<div class="legend">' +
+    '<span><i style="background:#6FA88E"></i>Leve (1–4)</span>' +
+    '<span><i style="background:#E0A458"></i>Moderada (5–6)</span>' +
+    '<span><i style="background:#D08440"></i>Forte (7–8)</span>' +
+    '<span><i style="background:#C25B47"></i>Muito forte (9–10)</span>' +
+    '</div>'
   const lolliSvg = mf.crises.length
-    ? '<svg viewBox="0 0 700 220"><line x1="34" y1="180" x2="680" y2="180" stroke="#E1DBCC"/>' + lolli + '</svg>'
+    ? '<svg viewBox="0 0 700 210"><line x1="34" y1="180" x2="680" y2="180" stroke="#E1DBCC"/>' +
+      '<line x1="34" y1="100" x2="680" y2="100" stroke="#ECE7DA"/>' + lolli + '</svg>' + legenda
     : '<p class="ps">Nenhuma crise registrada neste mês.</p>'
 
   const maxS = Math.max(1, ...mf.sintomas.map((s) => s.contagem))
@@ -171,53 +208,24 @@ function renderPagina2(d) {
     '<section class="page">' +
       '<div class="brandmark"><span class="dot"></span><span>MigraLog</span></div>' +
       '<div class="sec-head" style="margin-top:6px;"><h2>Detalhamento do mês — ' + esc(focoLabel) + '</h2><div class="rule"></div><span class="tag">' + mf.crises.length + ' crises</span></div>' +
-      '<div class="panel" style="margin-bottom:16px;"><p class="pt">Intensidade das crises ao longo do mês</p>' + lolliSvg + '</div>' +
+      '<div class="panel" style="margin-bottom:16px;"><p class="pt">Intensidade das crises ao longo do mês</p><p class="ps">Cada marcador é uma crise, no dia em que ocorreu</p>' + lolliSvg + '</div>' +
       '<div class="charts-3">' +
         '<div class="panel"><p class="pt">Sintomas mais frequentes</p><p class="ps">Ocorrências no mês</p><div style="margin-top:10px;">' + sintomas + '</div></div>' +
         '<div class="panel"><p class="pt">Medicação utilizada</p><p class="ps">Crises em que cada remédio foi tomado</p><div style="margin-top:10px;">' + meds + '</div>' +
           '<p class="pt" style="margin-top:18px;">Horário das crises</p><div style="margin-top:10px;">' + horarios + '</div></div>' +
       '</div>' +
       '<div class="sec" style="margin-top:18px;"><div class="sec-head"><h2>Correlação fisiológica</h2><div class="rule"></div><span class="tag">Dados do relógio</span></div>' + correlacaoHtml + '</div>' +
-      '<div class="foot"><span><b>MigraLog</b> · Gerado a partir do Amazfit Bip 6</span><span>Página 2 de 3</span></div>' +
+      '<div class="disclaimer"><b>Sobre este relatório.</b> Gerado automaticamente pelo <b>MigraLog</b> a partir de auto-registros e sensores do Amazfit Bip 6. As medições por sensores de pulso são estimativas de bem-estar e <b>não constituem diagnóstico médico</b>.</div>' +
+      '<div class="foot"><span><b>MigraLog</b> · Gerado a partir do Amazfit Bip 6</span><span>Página 2 de 2</span></div>' +
     '</section>'
   )
 }
 
-function renderPagina3(d) {
-  const mf = d.mesFoco
-  const focoLabel = (d.periodo.mesFoco.label || '') + ' / ' + d.periodo.mesFoco.year
-  const pillBg = { leve: '#CDE3D6', moderada: '#F3E4C4', forte: '#F0D9B8', muitoforte: '#E7B6AB' }
-  const pillFg = { leve: '#2E6B4E', moderada: '#9A7A2A', forte: '#9A6418', muitoforte: '#8E2E1C' }
-
-  const rows = mf.crises.length
-    ? mf.crises.map((e) => {
-        const f = faixaOf(e.intensity)
-        const sint = (e.symptoms || []).join(', ') || '—'
-        const med = (e.medications || []).join(', ') || '—'
-        return (
-          '<tr class="ep-row">' +
-          '<td class="num">' + pad2(e.day) + '/' + pad2(d.periodo.mesFoco.month) + '</td>' +
-          '<td class="num">' + pad2(e.hour) + ':' + pad2(e.minute) + '</td>' +
-          '<td><span class="pill" style="background:' + pillBg[f] + ';color:' + pillFg[f] + '">' + e.intensity + '</span></td>' +
-          '<td>' + esc(e.location || '—') + '</td>' +
-          '<td>' + esc(sint) + '</td>' +
-          '<td>' + esc(med) + '</td>' +
-          '<td class="num">' + (e.hr || '—') + '</td>' +
-          '<td class="num">' + (e.sleep || '—') + '</td>' +
-          '<td class="num">' + (e.stress || '—') + '</td>' +
-          '</tr>'
-        )
-      }).join('')
-    : '<tr><td colspan="9" class="ps">Nenhuma crise registrada neste mês.</td></tr>'
-
-  return (
-    '<section class="page">' +
-      '<div class="brandmark"><span class="dot"></span><span>MigraLog</span></div>' +
-      '<div class="sec-head" style="margin-top:6px;"><h2>Registro detalhado — ' + esc(focoLabel) + '</h2><div class="rule"></div><span class="tag">por episódio</span></div>' +
-      '<table><thead><tr><th>Data</th><th>Hora</th><th>Int.</th><th>Local</th><th>Sintomas</th><th>Medicação</th><th>FC</th><th>Sono*</th><th>Estr.</th></tr></thead><tbody>' + rows + '</tbody></table>' +
-      '<p class="ps" style="margin-top:6px;">* Sono e estresse em índice 0–100 do relógio (não horas).</p>' +
-      '<div class="disclaimer"><b>Sobre este relatório.</b> Gerado automaticamente pelo <b>MigraLog</b> a partir de auto-registros e sensores do Amazfit Bip 6. As medições por sensores de pulso são estimativas de bem-estar e <b>não constituem diagnóstico médico</b>.</div>' +
-      '<div class="foot"><span><b>MigraLog</b> · Gerado a partir do Amazfit Bip 6</span><span>Página 3 de 3</span></div>' +
-    '</section>'
-  )
+export function renderReport(data) {
+  const d = Object.assign({}, unpackReport(data || {}))
+  d.paciente = d.paciente || {}
+  d.periodo = d.periodo || { de: {}, ate: {}, mesFoco: {} }
+  d.consolidado6m = d.consolidado6m || { totalCrises: 0, intensidadeMedia: 0, criseMaisForte: 0, porMes: [] }
+  d.mesFoco = d.mesFoco || { crises: [], sintomas: [], medicacoes: [], horarios: { manha: 0, tarde: 0, noite: 0 } }
+  return renderPagina1(d) + renderPagina2(d)
 }
