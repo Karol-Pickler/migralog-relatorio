@@ -52,7 +52,7 @@ function episodeTable(d) {
 
   return (
     '<div class="sec"><div class="sec-head"><h2>Registro detalhado — ' + esc(focoLabel) + '</h2><div class="rule"></div><span class="tag">por episódio</span></div>' +
-    '<table><thead><tr><th>Data</th><th>Hora</th><th>Int.</th><th>Local</th><th>Sintomas</th><th>Medicação</th><th>FC</th><th>Sono*</th><th>Estr.</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+    '<div class="table-wrap"><table><thead><tr><th>Data</th><th>Hora</th><th>Int.</th><th>Local</th><th>Sintomas</th><th>Medicação</th><th>FC</th><th>Sono*</th><th>Estr.</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
     '<p class="ps" style="margin-top:6px;">* Sono e estresse em índice 0–100 do relógio (não horas).</p></div>'
   )
 }

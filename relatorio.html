@@ -145,6 +145,49 @@
 
   .disclaimer{margin-top:18px;font-size:9.5px;color:var(--ink-faint);line-height:1.5;border:1px dashed var(--line);border-radius:10px;padding:11px 13px;background:var(--paper-2);}
 
+  /* tabela rolável quando não cabe (base: sem efeito no desktop A4) */
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+
+  /* ---- responsivo: abaixo da largura A4 (210mm ≈ 794px) a folha vira fluida ---- */
+  @media (max-width:800px){
+    body{padding:12px 0;}
+    .doc{gap:12px;}
+    .page{
+      width:100%;min-height:0;
+      padding:24px 18px 64px;
+      box-shadow:0 6px 18px rgba(20,30,28,.16);
+    }
+    .foot{left:18px;right:18px;bottom:16px;}
+
+    /* cabeçalho empilha */
+    .masthead{flex-direction:column;gap:12px;}
+    .masthead .meta{text-align:left;white-space:normal !important;}
+    h1{font-size:27px;}
+
+    /* KPIs: 5 colunas → 2 */
+    .kpis{grid-template-columns:repeat(2,1fr);}
+    .kpi{border-right:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft);}
+    .kpi:nth-child(2n){border-right:none;}
+    .kpi:nth-last-child(-n+1){border-bottom:none;}
+    .kpi .value{font-size:26px;}
+
+    /* gráficos lado a lado → empilhados */
+    .charts-2,.charts-3{grid-template-columns:1fr;}
+
+    /* tabela detalhada rola na horizontal sem espremer as colunas */
+    .table-wrap table{min-width:560px;}
+
+    /* títulos de seção podem quebrar a linha */
+    .sec-head h2{white-space:normal;}
+  }
+
+  @media (max-width:420px){
+    .page{padding:20px 14px 60px;}
+    h1{font-size:24px;}
+    .kpi .value{font-size:23px;}
+    .kpi .value.text{font-size:16px;}
+  }
+
   @media print{
     body{background:none;padding:0;}
     .doc{gap:0;}
