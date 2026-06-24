@@ -42,9 +42,9 @@ function episodeTable(d) {
           '<td>' + esc(e.location || '—') + '</td>' +
           '<td>' + esc(sint) + '</td>' +
           '<td>' + esc(med) + '</td>' +
-          '<td class="num">' + (e.hr || '—') + '</td>' +
-          '<td class="num">' + (e.sleep || '—') + '</td>' +
-          '<td class="num">' + (e.stress || '—') + '</td>' +
+          '<td class="num">' + (e.hr == null ? '—' : e.hr) + '</td>' +
+          '<td class="num">' + (e.sleep == null ? '—' : e.sleep) + '</td>' +
+          '<td class="num">' + (e.stress == null ? '—' : e.stress) + '</td>' +
           '</tr>'
         )
       }).join('')
