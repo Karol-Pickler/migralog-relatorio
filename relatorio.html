@@ -199,15 +199,16 @@
   .spinner{width:44px;height:44px;border-radius:50%;border:4px solid var(--brand-soft);border-top-color:var(--brand);animation:spin .8s linear infinite;}
   @keyframes spin{to{transform:rotate(360deg);}}
   .loading .lbl{font-size:14px;color:var(--ink-soft);}
-  /* barra de ação (salvar PDF) */
+  /* barra de instrução (salvar PDF pelo menu do navegador) */
   .actions{position:sticky;top:0;z-index:10;display:flex;justify-content:center;padding:12px;background:rgba(207,201,187,.92);}
-  .action-btn{background:var(--brand);color:#fff;border:none;border-radius:10px;padding:12px 20px;font-size:15px;font-weight:600;font-family:'Hanken Grotesk',-apple-system,sans-serif;cursor:pointer;}
+  .hint{color:var(--ink-soft);font-size:13px;line-height:1.4;text-align:center;max-width:560px;font-family:'Hanken Grotesk',-apple-system,sans-serif;}
+  .hint b{color:var(--brand-deep);}
   @media print{.actions{display:none !important;}}
   </style>
 </head>
 <body>
   <div class="actions" id="actions" style="display:none">
-    <button class="action-btn" id="pdfBtn" type="button">📄 Salvar PDF</button>
+    <div class="hint">📄 Para salvar em PDF ou enviar à médica: abra o menu do navegador (⋮) e toque em <b>Imprimir</b> / <b>Salvar como PDF</b>.</div>
   </div>
   <div class="doc" id="doc">
     <div class="loading"><div class="spinner"></div><div class="lbl">Gerando relatório…</div></div>
@@ -229,13 +230,6 @@
         else {
           const data = JSON.parse(decodeURIComponent(raw))
           document.getElementById('doc').innerHTML = renderReport(data)
-          document.getElementById('pdfBtn').onclick = function () {
-            var b = document.getElementById('pdfBtn')
-            if (typeof window.print !== 'function') { b.textContent = '⚠ DIAG: sem window.print'; return }
-            b.textContent = '⏳ DIAG: chamando print…'
-            try { window.print(); b.textContent = '✓ DIAG: print() retornou' }
-            catch (e) { b.textContent = '⚠ DIAG: erro ' + e.message }
-          }
           document.getElementById('actions').style.display = 'flex'
         }
       } catch (e) { show('Falha ao montar o relatório: ' + e.message) }
