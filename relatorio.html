@@ -229,7 +229,13 @@
         else {
           const data = JSON.parse(decodeURIComponent(raw))
           document.getElementById('doc').innerHTML = renderReport(data)
-          document.getElementById('pdfBtn').onclick = function () { window.print() }
+          document.getElementById('pdfBtn').onclick = function () {
+            var b = document.getElementById('pdfBtn')
+            if (typeof window.print !== 'function') { b.textContent = '⚠ DIAG: sem window.print'; return }
+            b.textContent = '⏳ DIAG: chamando print…'
+            try { window.print(); b.textContent = '✓ DIAG: print() retornou' }
+            catch (e) { b.textContent = '⚠ DIAG: erro ' + e.message }
+          }
           document.getElementById('actions').style.display = 'flex'
         }
       } catch (e) { show('Falha ao montar o relatório: ' + e.message) }
