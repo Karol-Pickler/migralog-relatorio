@@ -199,9 +199,18 @@
   .spinner{width:44px;height:44px;border-radius:50%;border:4px solid var(--brand-soft);border-top-color:var(--brand);animation:spin .8s linear infinite;}
   @keyframes spin{to{transform:rotate(360deg);}}
   .loading .lbl{font-size:14px;color:var(--ink-soft);}
+  /* barra de ação (compartilhar) */
+  .actions{position:sticky;top:0;z-index:10;display:flex;justify-content:center;padding:12px;background:rgba(207,201,187,.92);}
+  .share-btn{background:var(--brand);color:#fff;border:none;border-radius:10px;padding:12px 20px;font-size:15px;font-weight:600;font-family:'Hanken Grotesk',-apple-system,sans-serif;cursor:pointer;}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:8px;font-family:'Hanken Grotesk',-apple-system,sans-serif;font-size:14px;z-index:20;opacity:0;transition:opacity .2s;pointer-events:none;}
+  .toast.show{opacity:1;}
+  @media print{.actions{display:none !important;}}
   </style>
 </head>
 <body>
+  <div class="actions" id="actions" style="display:none">
+    <button class="share-btn" id="shareBtn" type="button">📤 Compartilhar relatório</button>
+  </div>
   <div class="doc" id="doc">
     <div class="loading"><div class="spinner"></div><div class="lbl">Gerando relatório…</div></div>
   </div>
@@ -215,6 +224,27 @@
       p.textContent = msg
       doc.appendChild(p)
     }
+    function toast(msg) {
+      var t = document.getElementById('toast')
+      if (!t) return
+      t.textContent = msg
+      t.classList.add('show')
+      setTimeout(function () { t.classList.remove('show') }, 2200)
+    }
+    function shareReport() {
+      var url = location.href
+      var payload = { title: 'Relatório MigraLog', text: 'Relatório de crises de enxaqueca (MigraLog)', url: url }
+      if (navigator.share) {
+        navigator.share(payload).catch(function () {})
+      } else if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(
+          function () { toast('Link copiado — cole onde quiser') },
+          function () { window.prompt('Copie o link do relatório:', url) }
+        )
+      } else {
+        window.prompt('Copie o link do relatório:', url)
+      }
+    }
     function build() {
       try {
         const raw = (location.hash || '').replace(/^#/, '')
@@ -222,11 +252,14 @@
         else {
           const data = JSON.parse(decodeURIComponent(raw))
           document.getElementById('doc').innerHTML = renderReport(data)
+          document.getElementById('shareBtn').onclick = shareReport
+          document.getElementById('actions').style.display = 'flex'
         }
       } catch (e) { show('Falha ao montar o relatório: ' + e.message) }
     }
     // deixa o spinner pintar antes do render síncrono (que bloqueia a thread)
     requestAnimationFrame(function () { requestAnimationFrame(build) })
   </script>
+  <div class="toast" id="toast"></div>
 </body>
 </html>
