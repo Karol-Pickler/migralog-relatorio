@@ -194,11 +194,16 @@
     .page{box-shadow:none;margin:0;}
     @page{size:A4;margin:0;}
   }
+  /* spinner de carregamento do relatório */
+  .loading{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;min-height:60vh;font-family:'Hanken Grotesk',-apple-system,sans-serif;}
+  .spinner{width:44px;height:44px;border-radius:50%;border:4px solid var(--brand-soft);border-top-color:var(--brand);animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .loading .lbl{font-size:14px;color:var(--ink-soft);}
   </style>
 </head>
 <body>
   <div class="doc" id="doc">
-    <div style="padding:40px;font-family:sans-serif;color:#555">Carregando relatório…</div>
+    <div class="loading"><div class="spinner"></div><div class="lbl">Gerando relatório…</div></div>
   </div>
   <script type="module">
     import { renderReport } from './render.js'
@@ -210,14 +215,18 @@
       p.textContent = msg
       doc.appendChild(p)
     }
-    try {
-      const raw = (location.hash || '').replace(/^#/, '')
-      if (!raw) { show('Sem dados no relatório. Abra a partir do app MigraLog no celular.') }
-      else {
-        const data = JSON.parse(decodeURIComponent(raw))
-        document.getElementById('doc').innerHTML = renderReport(data)
-      }
-    } catch (e) { show('Falha ao montar o relatório: ' + e.message) }
+    function build() {
+      try {
+        const raw = (location.hash || '').replace(/^#/, '')
+        if (!raw) { show('Sem dados no relatório. Abra a partir do app MigraLog no celular.') }
+        else {
+          const data = JSON.parse(decodeURIComponent(raw))
+          document.getElementById('doc').innerHTML = renderReport(data)
+        }
+      } catch (e) { show('Falha ao montar o relatório: ' + e.message) }
+    }
+    // deixa o spinner pintar antes do render síncrono (que bloqueia a thread)
+    requestAnimationFrame(function () { requestAnimationFrame(build) })
   </script>
 </body>
 </html>
