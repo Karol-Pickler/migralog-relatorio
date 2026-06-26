@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>MigraLog — Relatório de Crises de Enxaqueca</title>
+  <!-- title updated by script below based on lang -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -203,10 +204,25 @@
 </head>
 <body>
   <div class="doc" id="doc">
-    <div class="loading"><div class="spinner"></div><div class="lbl">Gerando relatório…</div></div>
+    <div class="loading"><div class="spinner"></div><div class="lbl" id="spinner-lbl">Gerando relatório…</div></div>
   </div>
   <script type="module">
-    import { renderReport } from './render.js'
+    import { renderReport, I18N } from './render.js'
+
+    function frLang() {
+      try {
+        var raw = (location.hash || '').replace(/^#/, '')
+        if (raw) { var d = JSON.parse(decodeURIComponent(raw)); if (d && (d.lang === 'en' || d.lang === 'pt')) return d.lang }
+      } catch (e) {}
+      return (navigator.language || '').toLowerCase().indexOf('pt') === 0 ? 'pt' : 'pt'
+    }
+
+    var lang = frLang()
+    var T = I18N[lang]
+    document.title = T.report_doc_title
+    var spinnerLbl = document.getElementById('spinner-lbl')
+    if (spinnerLbl) spinnerLbl.textContent = T.generating
+
     function show(msg) {
       var doc = document.getElementById('doc')
       doc.textContent = ''
@@ -218,7 +234,7 @@
     function build() {
       try {
         const raw = (location.hash || '').replace(/^#/, '')
-        if (!raw) { show('Sem dados no relatório. Abra a partir do app MigraLog no celular.') }
+        if (!raw) { show(T.no_data_fragment) }
         else {
           const data = JSON.parse(decodeURIComponent(raw))
           document.getElementById('doc').innerHTML = renderReport(data)
