@@ -214,7 +214,7 @@
         var raw = (location.hash || '').replace(/^#/, '')
         if (raw) { var d = JSON.parse(decodeURIComponent(raw)); if (d && (d.lang === 'en' || d.lang === 'pt')) return d.lang }
       } catch (e) {}
-      return (navigator.language || '').toLowerCase().indexOf('pt') === 0 ? 'pt' : 'pt'
+      return (navigator.language || '').toLowerCase().indexOf('pt') === 0 ? 'pt' : 'en'
     }
 
     var lang = frLang()
@@ -239,7 +239,7 @@
           const data = JSON.parse(decodeURIComponent(raw))
           document.getElementById('doc').innerHTML = renderReport(data)
         }
-      } catch (e) { show('Falha ao montar o relatório: ' + e.message) }
+      } catch (e) { show((lang === 'en' ? 'Failed to build the report: ' : 'Falha ao montar o relatório: ') + e.message) }
     }
     // deixa o spinner pintar antes do render síncrono (que bloqueia a thread)
     requestAnimationFrame(function () { requestAnimationFrame(build) })

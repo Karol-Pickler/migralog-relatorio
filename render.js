@@ -2,7 +2,8 @@
 // renderReport(data) -> string com o HTML interno de <div class="doc">.
 // data pode vir empacotada (do #fragment) ou rica; unpackReport normaliza (ver Task 13).
 import { unpackReport } from './report-codec.js'
-import { monthLabel } from '../lib/dates.js'
+
+
 
 export const I18N = {
   pt: {
@@ -78,6 +79,8 @@ export const I18N = {
     no_meds: 'Sem medicação registrada.',
     rpt_sleep_label: 'Sono',
     rpt_stress_label: 'Estresse',
+    crises_word: 'crises',
+    physio_index: 'índice 0–100',
   },
   en: {
     rpt_eyebrow: 'Clinical follow-up report',
@@ -152,6 +155,8 @@ export const I18N = {
     no_meds: 'No medication recorded.',
     rpt_sleep_label: 'Sleep',
     rpt_stress_label: 'Stress',
+    crises_word: 'attacks',
+    physio_index: 'index 0–100',
   },
 }
 
@@ -160,7 +165,9 @@ export const renderReportInternals = { I18N }
 function pickLang(data) {
   if (data && data.lang === 'en') return 'en'
   if (data && data.lang === 'pt') return 'pt'
-  if (typeof navigator !== 'undefined' && navigator.language && navigator.language.toLowerCase().indexOf('pt') === 0) return 'pt'
+  if (typeof navigator !== 'undefined' && navigator.language) {
+    return navigator.language.toLowerCase().indexOf('pt') === 0 ? 'pt' : 'en'
+  }
   return 'pt'
 }
 
@@ -170,7 +177,10 @@ function esc(s) {
     .replace(/"/g, '&quot;')
 }
 function pad2(n) { return (n < 10 ? '0' : '') + n }
-function fmtAvg(n) { return (Number(n) || 0).toFixed(1).replace('.', ',') }
+function fmtAvg(n, lang) {
+  var s = (Number(n) || 0).toFixed(1)
+  return lang === 'en' ? s : s.replace('.', ',')
+}
 function fmtDate(ts) {
   if (!ts) return '—'
   const d = new Date(ts)
@@ -217,14 +227,14 @@ function episodeTable(d, T) {
 }
 
 // ---- Página 1: resumo de 6 meses + tabela de episódios ----
-function renderPagina1(d, T) {
+function renderPagina1(d, T, lang) {
   const c = d.consolidado6m
   const periodoLabel = (d.periodo.de.label || '') + ' – ' + (d.periodo.ate.label || '') + ' ' + (d.periodo.ate.year || '')
   const mesFocoLabel = (d.periodo.mesFoco.label || '') + ' / ' + d.periodo.mesFoco.year
 
   const kpis = [
     [T.rpt_total, String(c.totalCrises), 'num'],
-    [T.rpt_avg_intensity, fmtAvg(c.intensidadeMedia) + '<small> /10</small>', 'num'],
+    [T.rpt_avg_intensity, fmtAvg(c.intensidadeMedia, lang) + '<small> /10</small>', 'num'],
     [T.rpt_strongest, String(c.criseMaisForte) + '<small> /10</small>', 'num'],
     [T.rpt_most_med, esc(c.remedioMaisUsado || '—'), 'text'],
     [T.rpt_most_symptom, esc(c.sintomaMaisComum || '—'), 'text'],
@@ -261,7 +271,7 @@ function renderPagina1(d, T) {
   const polyline = pts.map((p) => p.x + ',' + p.y.toFixed(1)).join(' ')
   const dots = pts.map((p, i) =>
     '<circle cx="' + p.x + '" cy="' + p.y.toFixed(1) + '" r="3.5" fill="#C25B47"/>' +
-    '<text x="' + p.x + '" y="' + (p.y - 10).toFixed(1) + '" font-size="10.5" font-weight="600" fill="#23251F" text-anchor="middle">' + fmtAvg(p.v) + '</text>' +
+    '<text x="' + p.x + '" y="' + (p.y - 10).toFixed(1) + '" font-size="10.5" font-weight="600" fill="#23251F" text-anchor="middle">' + fmtAvg(p.v, lang) + '</text>' +
     '<text x="' + p.x + '" y="198" font-size="10.5" fill="#6E6C60" text-anchor="middle">' + esc(c.porMes[i].mes) + '</text>',
   ).join('')
 
@@ -365,8 +375,8 @@ function renderPagina2(d, T) {
     }
     correlacaoHtml =
       '<div class="panel"><p class="ps">' + T.rpt_physio_compare_sub + '</p><div class="cmp">' +
-      cmp(T.rpt_sleep_label, 'índice 0–100', cc.comCrise.sono, cc.semCrise.sono, 100, T.with_attack, T.without_attack) +
-      cmp(T.rpt_stress_label, 'índice 0–100', cc.comCrise.estresse, cc.semCrise.estresse, 100, T.with_attack, T.without_attack) +
+      cmp(T.rpt_sleep_label, T.physio_index, cc.comCrise.sono, cc.semCrise.sono, 100, T.with_attack, T.without_attack) +
+      cmp(T.rpt_stress_label, T.physio_index, cc.comCrise.estresse, cc.semCrise.estresse, 100, T.with_attack, T.without_attack) +
       cmp(T.hr_full, 'bpm', cc.comCrise.fc, cc.semCrise.fc, 120, T.with_attack, T.without_attack) +
       '</div></div>'
   }
@@ -374,7 +384,7 @@ function renderPagina2(d, T) {
   return (
     '<section class="page">' +
       '<div class="brandmark"><span class="dot"></span><span>MigraLog</span></div>' +
-      '<div class="sec-head" style="margin-top:6px;"><h2>' + T.rpt_detail_month + esc(focoLabel) + '</h2><div class="rule"></div><span class="tag">' + mf.crises.length + ' crises</span></div>' +
+      '<div class="sec-head" style="margin-top:6px;"><h2>' + T.rpt_detail_month + esc(focoLabel) + '</h2><div class="rule"></div><span class="tag">' + mf.crises.length + ' ' + T.crises_word + '</span></div>' +
       '<div class="panel" style="margin-bottom:16px;"><p class="pt">' + T.rpt_intensity_chart + '</p><p class="ps">' + T.rpt_intensity_chart_sub + '</p>' + lolliSvg + '</div>' +
       '<div class="charts-3">' +
         '<div class="panel"><p class="pt">' + T.sym_freq_title + '</p><p class="ps">' + T.sym_freq_sub + '</p><div style="margin-top:10px;">' + sintomas + '</div></div>' +
@@ -394,6 +404,7 @@ export function renderReport(data) {
   d.periodo = d.periodo || { de: {}, ate: {}, mesFoco: {} }
   d.consolidado6m = d.consolidado6m || { totalCrises: 0, intensidadeMedia: 0, criseMaisForte: 0, porMes: [] }
   d.mesFoco = d.mesFoco || { crises: [], sintomas: [], medicacoes: [], horarios: { manha: 0, tarde: 0, noite: 0 } }
-  const T = I18N[pickLang(data)]
-  return renderPagina1(d, T) + renderPagina2(d, T)
+  const lang = pickLang(data)
+  const T = I18N[lang]
+  return renderPagina1(d, T, lang) + renderPagina2(d, T)
 }
