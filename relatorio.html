@@ -207,8 +207,9 @@
   </style>
 </head>
 <body>
-  <div class="actions" id="actions" style="display:none">
-    <button id="probeBtn" type="button" style="background:#0F5C57;color:#fff;border:none;border-radius:10px;padding:12px 18px;font-size:14px;font-weight:600;cursor:pointer;">🔧 Testar opções de salvar/enviar</button>
+  <div class="actions" id="actions" style="display:none;flex-wrap:wrap;gap:8px;">
+    <button id="openBlank" type="button" style="background:#0F5C57;color:#fff;border:none;border-radius:10px;padding:12px 18px;font-size:14px;font-weight:600;cursor:pointer;">Abrir no navegador (_blank)</button>
+    <button id="openSystem" type="button" style="background:#A9852F;color:#fff;border:none;border-radius:10px;padding:12px 18px;font-size:14px;font-weight:600;cursor:pointer;">Abrir (_system)</button>
   </div>
   <pre id="probeOut" style="display:none;white-space:pre-wrap;margin:8px;padding:12px;font-size:12px;color:#23251F;background:#fff;border:1px solid #ccc;border-radius:8px;"></pre>
   <div class="doc" id="doc">
@@ -224,26 +225,13 @@
       p.textContent = msg
       doc.appendChild(p)
     }
-    function probe() {
+    function openTest(target) {
       var out = document.getElementById('probeOut')
       out.style.display = 'block'
-      var L = []
-      L.push('navigator.share: ' + (typeof navigator.share))
-      L.push('navigator.canShare: ' + (typeof navigator.canShare))
-      try {
-        var f = new File(['x'], 'teste.pdf', { type: 'application/pdf' })
-        L.push('canShare(arquivo): ' + (navigator.canShare ? navigator.canShare({ files: [f] }) : 'n/a'))
-      } catch (e) { L.push('canShare(arquivo) erro: ' + e.message) }
-      L.push('window.open: ' + (typeof window.open))
-      out.textContent = L.join('\n')
-      if (navigator.share) {
-        navigator.share({ title: 'Teste MigraLog', text: 'teste de compartilhamento' }).then(
-          function () { out.textContent += '\nshare(): ABRIU o menu' },
-          function (e) { out.textContent += '\nshare(): nao abriu / cancelado (' + (e && e.name) + ')' }
-        )
-      } else {
-        out.textContent += '\nshare(): indisponivel'
-      }
+      var w
+      try { w = window.open(location.href, target) }
+      catch (e) { out.textContent = 'erro window.open("' + target + '"): ' + e.message; return }
+      out.textContent = 'window.open("' + target + '") retornou: ' + (w ? 'um objeto (abriu algo)' : 'null (bloqueado?)') + '\nVeja se abriu um navegador de verdade (Chrome/Safari, com barra de endereço).'
     }
     function build() {
       try {
@@ -252,7 +240,8 @@
         else {
           const data = JSON.parse(decodeURIComponent(raw))
           document.getElementById('doc').innerHTML = renderReport(data)
-          document.getElementById('probeBtn').onclick = probe
+          document.getElementById('openBlank').onclick = function () { openTest('_blank') }
+          document.getElementById('openSystem').onclick = function () { openTest('_system') }
           document.getElementById('actions').style.display = 'flex'
         }
       } catch (e) { show('Falha ao montar o relatório: ' + e.message) }
