@@ -208,8 +208,9 @@
 </head>
 <body>
   <div class="actions" id="actions" style="display:none">
-    <div class="hint">📄 Para salvar em PDF ou enviar à médica: abra o menu do navegador (⋮) e toque em <b>Imprimir</b> / <b>Salvar como PDF</b>.</div>
+    <button id="probeBtn" type="button" style="background:#0F5C57;color:#fff;border:none;border-radius:10px;padding:12px 18px;font-size:14px;font-weight:600;cursor:pointer;">🔧 Testar opções de salvar/enviar</button>
   </div>
+  <pre id="probeOut" style="display:none;white-space:pre-wrap;margin:8px;padding:12px;font-size:12px;color:#23251F;background:#fff;border:1px solid #ccc;border-radius:8px;"></pre>
   <div class="doc" id="doc">
     <div class="loading"><div class="spinner"></div><div class="lbl">Gerando relatório…</div></div>
   </div>
@@ -223,6 +224,27 @@
       p.textContent = msg
       doc.appendChild(p)
     }
+    function probe() {
+      var out = document.getElementById('probeOut')
+      out.style.display = 'block'
+      var L = []
+      L.push('navigator.share: ' + (typeof navigator.share))
+      L.push('navigator.canShare: ' + (typeof navigator.canShare))
+      try {
+        var f = new File(['x'], 'teste.pdf', { type: 'application/pdf' })
+        L.push('canShare(arquivo): ' + (navigator.canShare ? navigator.canShare({ files: [f] }) : 'n/a'))
+      } catch (e) { L.push('canShare(arquivo) erro: ' + e.message) }
+      L.push('window.open: ' + (typeof window.open))
+      out.textContent = L.join('\n')
+      if (navigator.share) {
+        navigator.share({ title: 'Teste MigraLog', text: 'teste de compartilhamento' }).then(
+          function () { out.textContent += '\nshare(): ABRIU o menu' },
+          function (e) { out.textContent += '\nshare(): nao abriu / cancelado (' + (e && e.name) + ')' }
+        )
+      } else {
+        out.textContent += '\nshare(): indisponivel'
+      }
+    }
     function build() {
       try {
         const raw = (location.hash || '').replace(/^#/, '')
@@ -230,6 +252,7 @@
         else {
           const data = JSON.parse(decodeURIComponent(raw))
           document.getElementById('doc').innerHTML = renderReport(data)
+          document.getElementById('probeBtn').onclick = probe
           document.getElementById('actions').style.display = 'flex'
         }
       } catch (e) { show('Falha ao montar o relatório: ' + e.message) }
