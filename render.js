@@ -81,6 +81,15 @@ export const I18N = {
     rpt_stress_label: 'Estresse',
     crises_word: 'crises',
     physio_index: 'índice 0–100',
+    rpt_auto_heading: 'Carga autonômica (VFC)',
+    rpt_auto_tag: 'Derivado da VFC',
+    rpt_auto_trend_title: 'Tendência no mês',
+    rpt_auto_trend_sub: 'Média diária de estresse; dias com crise destacados',
+    rpt_auto_snap_title: 'Por crise: no momento vs. baseline',
+    rpt_auto_snap_sub: 'Estresse no registro da crise vs. média dos últimos 7 dias; minigráfico = 6h antes',
+    rpt_auto_onset: 'Na crise:',
+    rpt_auto_baseline7d: 'baseline 7d:',
+    rpt_auto_source_note: 'Índice de estresse calculado pela Zepp a partir da variabilidade da frequência cardíaca (VFC). O ZeppOS não disponibiliza o valor de VFC diretamente a apps de terceiros; este é o indicador autonômico derivado dele.',
   },
   en: {
     rpt_eyebrow: 'Clinical follow-up report',
@@ -157,6 +166,15 @@ export const I18N = {
     rpt_stress_label: 'Stress',
     crises_word: 'attacks',
     physio_index: 'index 0–100',
+    rpt_auto_heading: 'Autonomic load (HRV)',
+    rpt_auto_tag: 'Derived from HRV',
+    rpt_auto_trend_title: 'Monthly trend',
+    rpt_auto_trend_sub: 'Daily average stress; attack days highlighted',
+    rpt_auto_snap_title: 'Per attack: at onset vs. baseline',
+    rpt_auto_snap_sub: 'Stress at the attack log vs. last-7-day average; mini-chart = prior 6h',
+    rpt_auto_onset: 'At attack:',
+    rpt_auto_baseline7d: '7d baseline:',
+    rpt_auto_source_note: 'Stress index computed by Zepp from heart-rate variability (HRV). ZeppOS does not expose the HRV value directly to third-party apps; this is the autonomic indicator derived from it.',
   },
 }
 
@@ -308,6 +326,55 @@ function hbar(nome, contagem, max, cor) {
   return '<div class="hbar"><span class="hl">' + esc(nome) + '</span><span class="ht"><span class="hf" style="width:' + w + '%;background:' + cor + '"></span></span><span class="hv">' + contagem + '</span></div>'
 }
 
+function autonomicSection(a, T) {
+  if (!a) return ''
+  let trend = ''
+  if (a.serie && a.serie.length) {
+    const n = a.serie.length
+    const pts = a.serie.map((p, i) => {
+      const x = 40 + (n === 1 ? 0 : i * (640 / (n - 1)))
+      const y = 180 - (p.valor / 100) * 160
+      return { x, y, crise: p.crise }
+    })
+    const poly = pts.map((q) => q.x.toFixed(1) + ',' + q.y.toFixed(1)).join(' ')
+    const dots = pts.map((q) =>
+      q.crise
+        ? '<circle cx="' + q.x.toFixed(1) + '" cy="' + q.y.toFixed(1) + '" r="5" fill="#C25B47"/>' +
+          '<circle class="auto-crise" cx="' + q.x.toFixed(1) + '" cy="' + q.y.toFixed(1) + '" r="8" fill="none" stroke="#0A3F3B" stroke-width="2"/>'
+        : '<circle cx="' + q.x.toFixed(1) + '" cy="' + q.y.toFixed(1) + '" r="3" fill="#2F7B72"/>',
+    ).join('')
+    trend =
+      '<p class="pt">' + T.rpt_auto_trend_title + '</p><p class="ps">' + T.rpt_auto_trend_sub + '</p>' +
+      '<svg viewBox="0 0 700 200"><line x1="34" y1="180" x2="680" y2="180" stroke="#E1DBCC"/>' +
+      '<polyline points="' + poly + '" fill="none" stroke="#2F7B72" stroke-width="2.5" stroke-linejoin="round"/>' + dots + '</svg>'
+  }
+  let compare = ''
+  if (a.comparacao) {
+    const w = (v) => Math.round(v) // escala 0–100
+    compare =
+      '<div class="cmp"><div class="cmp-row">' +
+      '<div class="cmp-bar"><span class="ck">' + T.with_attack + '</span><span class="ct"><span class="cf" style="width:' + w(a.comparacao.comCrise) + '%;background:#C25B47"></span></span><span class="cv">' + a.comparacao.comCrise + '</span></div>' +
+      '<div class="cmp-bar"><span class="ck">' + T.without_attack + '</span><span class="ct"><span class="cf" style="width:' + w(a.comparacao.semCrise) + '%;background:#6FA88E"></span></span><span class="cv">' + a.comparacao.semCrise + '</span></div>' +
+      '</div></div>'
+  }
+  let snaps = ''
+  if (a.crises && a.crises.length) {
+    const rows = a.crises.map((c) => {
+      const pre = c.pre || []
+      const spark = pre.map((v, i) => (i * 12).toFixed(0) + ',' + (24 - (v / 100) * 22).toFixed(1)).join(' ')
+      const sparkSvg = pre.length
+        ? '<svg class="spark" viewBox="0 0 ' + Math.max(12, (pre.length - 1) * 12) + ' 24" width="72" height="24"><polyline points="' + spark + '" fill="none" stroke="#2F7B72" stroke-width="2"/></svg>'
+        : ''
+      return '<div class="snap-row"><span class="snap-day">' + pad2(c.dia) + '</span>' +
+        '<span class="snap-val">' + T.rpt_auto_onset + ' <b>' + c.onset + '</b> · ' + T.rpt_auto_baseline7d + ' ' + c.baseline7d + '</span>' + sparkSvg + '</div>'
+    }).join('')
+    snaps = '<p class="pt" style="margin-top:12px;">' + T.rpt_auto_snap_title + '</p><p class="ps">' + T.rpt_auto_snap_sub + '</p>' + rows
+  }
+  return '<div class="sec" style="margin-top:18px;"><div class="sec-head"><h2>' + T.rpt_auto_heading + '</h2><div class="rule"></div><span class="tag">' + T.rpt_auto_tag + '</span></div>' +
+    '<div class="panel">' + trend + compare + snaps +
+    '<p class="ps" style="margin-top:10px;">' + T.rpt_auto_source_note + '</p></div></div>'
+}
+
 // ---- Página 2: detalhamento do mês + correlação ----
 function renderPagina2(d, T) {
   const mf = d.mesFoco
@@ -376,7 +443,6 @@ function renderPagina2(d, T) {
     correlacaoHtml =
       '<div class="panel"><p class="ps">' + T.rpt_physio_compare_sub + '</p><div class="cmp">' +
       cmp(T.rpt_sleep_label, T.physio_index, cc.comCrise.sono, cc.semCrise.sono, 100, T.with_attack, T.without_attack) +
-      cmp(T.rpt_stress_label, T.physio_index, cc.comCrise.estresse, cc.semCrise.estresse, 100, T.with_attack, T.without_attack) +
       cmp(T.hr_full, 'bpm', cc.comCrise.fc, cc.semCrise.fc, 120, T.with_attack, T.without_attack) +
       '</div></div>'
   }
@@ -392,6 +458,7 @@ function renderPagina2(d, T) {
           '<p class="pt" style="margin-top:18px;">' + T.rpt_horarios_heading + '</p><div style="margin-top:10px;">' + horarios + '</div></div>' +
       '</div>' +
       '<div class="sec" style="margin-top:18px;"><div class="sec-head"><h2>' + T.rpt_physio_heading + '</h2><div class="rule"></div><span class="tag">' + T.rpt_physio_tag + '</span></div>' + correlacaoHtml + '</div>' +
+      autonomicSection(d.autonomic, T) +
       '<div class="disclaimer">' + T.rpt_disclaimer + '</div>' +
       '<div class="foot"><span><b>MigraLog</b> · ' + T.rpt_footer + '</span><span>' + T.rpt_page2 + '</span></div>' +
     '</section>'
