@@ -3,7 +3,7 @@
 // (episódios viram tuplas posicionais, sem repetir nomes de campo nem ts/year/month);
 // unpackReport reconstrói o objeto rico. Puras e idempotentes em dado já no formato alvo.
 
-const CR_FIELDS = ['day', 'hour', 'minute', 'intensity', 'location', 'symptoms', 'medications', 'hr', 'sleep', 'stress', 'emergencia']
+const CR_FIELDS = ['day', 'hour', 'minute', 'intensity', 'location', 'symptoms', 'medications', 'hr', 'sleep', 'stress', 'emergencia', 'duracao']
 
 function packAutonomic(a) {
   const s = (a.serie || []).map((p) => p.dia + '.' + p.valor + '.' + (p.crise ? 1 : 0)).join('!')

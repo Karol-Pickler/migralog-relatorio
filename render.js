@@ -82,6 +82,13 @@ export const I18N = {
     crises_word: 'crises',
     physio_index: 'índice 0–100',
     no_med_label: 'Nenhum',
+    rpt_dur_title: 'Duração das crises',
+    rpt_dur_sub: 'Crises do mês por faixa de duração',
+    dur_lt4: '< 4h',
+    dur_4_12: '4–12h',
+    dur_12_24: '12–24h',
+    dur_gt24: '> 24h',
+    dur_unrecorded: 'sem registro de duração',
     rpt_auto_heading: 'Carga autonômica (VFC)',
     rpt_auto_tag: 'Derivado da VFC',
     rpt_auto_trend_title: 'Tendência no mês',
@@ -168,6 +175,13 @@ export const I18N = {
     crises_word: 'attacks',
     physio_index: 'index 0–100',
     no_med_label: 'None',
+    rpt_dur_title: 'Attack duration',
+    rpt_dur_sub: 'Attacks this month by duration band',
+    dur_lt4: '< 4h',
+    dur_4_12: '4–12h',
+    dur_12_24: '12–24h',
+    dur_gt24: '> 24h',
+    dur_unrecorded: 'without recorded duration',
     rpt_auto_heading: 'Autonomic load (HRV)',
     rpt_auto_tag: 'Derived from HRV',
     rpt_auto_trend_title: 'Monthly trend',
@@ -328,6 +342,22 @@ function hbar(nome, contagem, max, cor) {
   return '<div class="hbar"><span class="hl">' + esc(nome) + '</span><span class="ht"><span class="hf" style="width:' + w + '%;background:' + cor + '"></span></span><span class="hv">' + contagem + '</span></div>'
 }
 
+// Bloco "Duração das crises": distribuição por faixa clínica no mês em foco.
+// Aparece só quando ≥1 crise tem duração registrada; "N sem registro" acompanha
+// quando N>0 (dado ausente não vira zero silencioso).
+function duracaoBlock(crises, T) {
+  const BANDS = ['<4h', '4-12h', '12-24h', '>24h'] // espelho de DURACOES (lib/episodes.js)
+  const LABELS = [T.dur_lt4, T.dur_4_12, T.dur_12_24, T.dur_gt24]
+  const counts = BANDS.map((b) => crises.filter((e) => e.duracao === b).length)
+  const total = counts.reduce((s, n) => s + n, 0)
+  if (!total) return ''
+  const sem = crises.length - total
+  const max = Math.max(1, ...counts)
+  const bars = BANDS.map((b, i) => hbar(LABELS[i], counts[i], max, '#0F5C57')).join('')
+  const nota = sem > 0 ? '<p class="ps" style="margin-top:6px;">' + sem + ' ' + T.dur_unrecorded + '</p>' : ''
+  return '<p class="pt" style="margin-top:18px;">' + T.rpt_dur_title + '</p><p class="ps">' + T.rpt_dur_sub + '</p><div style="margin-top:10px;">' + bars + '</div>' + nota
+}
+
 function autonomicSection(a, T) {
   if (!a) return ''
   let trend = ''
@@ -459,7 +489,7 @@ function renderPagina2(d, T) {
       '<div class="charts-3">' +
         '<div class="panel"><p class="pt">' + T.sym_freq_title + '</p><p class="ps">' + T.sym_freq_sub + '</p><div style="margin-top:10px;">' + sintomas + '</div></div>' +
         '<div class="panel"><p class="pt">' + T.med_used_title + '</p><p class="ps">' + T.med_used_sub + '</p><div style="margin-top:10px;">' + meds + '</div>' +
-          '<p class="pt" style="margin-top:18px;">' + T.rpt_horarios_heading + '</p><div style="margin-top:10px;">' + horarios + '</div></div>' +
+          '<p class="pt" style="margin-top:18px;">' + T.rpt_horarios_heading + '</p><div style="margin-top:10px;">' + horarios + '</div>' + duracaoBlock(mf.crises, T) + '</div>' +
       '</div>' +
       '<div class="sec" style="margin-top:18px;"><div class="sec-head"><h2>' + T.rpt_physio_heading + '</h2><div class="rule"></div><span class="tag">' + T.rpt_physio_tag + '</span></div>' + correlacaoHtml + '</div>' +
       autonomicSection(d.autonomic, T) +
