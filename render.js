@@ -81,6 +81,7 @@ export const I18N = {
     rpt_stress_label: 'Estresse',
     crises_word: 'crises',
     physio_index: 'índice 0–100',
+    no_med_label: 'Nenhum',
     rpt_auto_heading: 'Carga autonômica (VFC)',
     rpt_auto_tag: 'Derivado da VFC',
     rpt_auto_trend_title: 'Tendência no mês',
@@ -166,6 +167,7 @@ export const I18N = {
     rpt_stress_label: 'Stress',
     crises_word: 'attacks',
     physio_index: 'index 0–100',
+    no_med_label: 'None',
     rpt_auto_heading: 'Autonomic load (HRV)',
     rpt_auto_tag: 'Derived from HRV',
     rpt_auto_trend_title: 'Monthly trend',
@@ -415,8 +417,10 @@ function renderPagina2(d, T) {
     : '<p class="ps">' + T.no_symptoms + '</p>'
 
   const maxM = Math.max(1, ...mf.medicacoes.map((m) => m.contagem))
+  // '__none__' é a sentinela do agregador para "crise sem medicação" — traduz aqui
+  const medName = (m) => (m.nome === '__none__' ? T.no_med_label : m.nome)
   const meds = mf.medicacoes.length
-    ? mf.medicacoes.map((m) => hbar(m.nome, m.contagem, maxM, '#2F7B72')).join('')
+    ? mf.medicacoes.map((m) => hbar(medName(m), m.contagem, maxM, '#2F7B72')).join('')
     : '<p class="ps">' + T.no_meds + '</p>'
 
   const h = mf.horarios
