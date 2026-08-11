@@ -250,12 +250,15 @@
     var state = { data: null, months: [], selected: null }
 
     function paint() {
-      var bar = document.getElementById('monthbar')
-      bar.innerHTML = renderMonthBar(state.months, state.selected, T, (state.data && state.data.dropped) || 0)
       var mes = null
       for (var i = 0; i < state.months.length; i++) { if (state.months[i].key === state.selected) mes = state.months[i] }
       var report = (state.selected && state.data.months) ? state.data.months[state.selected] : state.data
+      // Documento primeiro, barra depois: se renderReport lançar, a página fica
+      // coerente (doc e barra ainda no mês anterior) em vez de anunciar um mês
+      // e mostrar outro.
       document.getElementById('doc').innerHTML = renderReport(report, { inProgress: !!(mes && mes.current) })
+      var bar = document.getElementById('monthbar')
+      bar.innerHTML = renderMonthBar(state.months, state.selected, T, (state.data && state.data.dropped) || 0)
     }
 
     // Delegação no container (a barra é redesenhada a cada troca, os botões não sobrevivem).
