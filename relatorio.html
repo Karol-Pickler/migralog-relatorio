@@ -189,11 +189,23 @@
     .kpi .value.text{font-size:16px;}
   }
 
+  /* barra de meses: fora do documento, some na impressão */
+  .monthbar{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:8px;overflow-x:auto;padding:10px 16px;margin:-32px 0 24px;background:rgba(246,243,236,.94);border-bottom:1px solid var(--line);font-family:'Hanken Grotesk',-apple-system,sans-serif;}
+  .monthbar:empty{display:none;}
+  .monthbar::-webkit-scrollbar{height:0;}
+  .mlabel{flex:none;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);padding-right:2px;}
+  .mpill{flex:none;font:inherit;font-size:13px;font-weight:600;color:var(--ink-soft);background:#fff;border:1px solid var(--line);border-radius:999px;padding:8px 14px;white-space:nowrap;cursor:pointer;}
+  .mpill:hover{border-color:var(--brand-soft);color:var(--brand-deep);}
+  .mpill.sel{background:var(--brand);border-color:var(--brand);color:#fff;}
+  .mnote{flex:none;font-size:11px;color:var(--ink-faint);white-space:nowrap;padding-left:4px;}
+  .mprog{font-size:11px;font-weight:500;color:var(--ink-faint);}
+
   @media print{
     body{background:none;padding:0;}
     .doc{gap:0;}
     .page{box-shadow:none;margin:0;}
     @page{size:A4;margin:0;}
+    .monthbar{display:none;}
   }
   /* spinner de carregamento do relatório */
   .loading{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;min-height:60vh;font-family:'Hanken Grotesk',-apple-system,sans-serif;}
@@ -203,11 +215,12 @@
   </style>
 </head>
 <body>
+  <div class="monthbar" id="monthbar"></div>
   <div class="doc" id="doc">
     <div class="loading"><div class="spinner"></div><div class="lbl" id="spinner-lbl">Gerando relatório…</div></div>
   </div>
   <script type="module">
-    import { renderReport, I18N } from './render.js'
+    import { renderReport, renderMonthBar, selectableMonths, defaultMonthKey, I18N } from './render.js'
 
     function frLang() {
       try {
@@ -231,14 +244,39 @@
       p.textContent = msg
       doc.appendChild(p)
     }
+
+    // Estado da página: o dado inteiro veio no #fragment, então trocar de mês é só
+    // re-renderizar — nenhuma requisição, nada de reescrever o hash (o hash É o dado).
+    var state = { data: null, months: [], selected: null }
+
+    function paint() {
+      var bar = document.getElementById('monthbar')
+      bar.innerHTML = renderMonthBar(state.months, state.selected, T, (state.data && state.data.dropped) || 0)
+      var mes = null
+      for (var i = 0; i < state.months.length; i++) { if (state.months[i].key === state.selected) mes = state.months[i] }
+      var report = (state.selected && state.data.months) ? state.data.months[state.selected] : state.data
+      document.getElementById('doc').innerHTML = renderReport(report, { inProgress: !!(mes && mes.current) })
+    }
+
+    // Delegação no container (a barra é redesenhada a cada troca, os botões não sobrevivem).
+    document.getElementById('monthbar').addEventListener('click', function (ev) {
+      var btn = ev.target.closest ? ev.target.closest('.mpill') : null
+      if (!btn) return
+      var key = btn.getAttribute('data-month')
+      if (!key || key === state.selected) return
+      state.selected = key
+      paint()
+      window.scrollTo(0, 0)
+    })
+
     function build() {
       try {
-        const raw = (location.hash || '').replace(/^#/, '')
-        if (!raw) { show(T.no_data_fragment) }
-        else {
-          const data = JSON.parse(decodeURIComponent(raw))
-          document.getElementById('doc').innerHTML = renderReport(data)
-        }
+        var raw = (location.hash || '').replace(/^#/, '')
+        if (!raw) { show(T.no_data_fragment); return }
+        state.data = JSON.parse(decodeURIComponent(raw))
+        state.months = selectableMonths(state.data)
+        state.selected = defaultMonthKey(state.data)
+        paint()
       } catch (e) { show((lang === 'en' ? 'Failed to build the report: ' : 'Falha ao montar o relatório: ') + e.message) }
     }
     // deixa o spinner pintar antes do render síncrono (que bloqueia a thread)

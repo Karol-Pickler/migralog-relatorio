@@ -9,9 +9,13 @@ export const I18N = {
   pt: {
     rpt_eyebrow: 'Relatório clínico de acompanhamento',
     rpt_title: 'Diário de Crises de Enxaqueca',
-    rpt_subtitle: 'Consolidação dos últimos 6 meses e detalhamento do mês corrente, com dados fisiológicos capturados pelo smartwatch.',
+    rpt_subtitle: 'Consolidação dos últimos 6 meses e detalhamento do mês selecionado, com dados fisiológicos capturados pelo smartwatch.',
     rpt_period: 'Período:',
     rpt_focus_month: 'Mês em foco:',
+    rpt_in_progress: '(mês em andamento)',
+    bar_month_label: 'Mês do relatório:',
+    bar_in_progress: 'em andamento',
+    bar_dropped: 'meses mais antigos omitidos (limite de tamanho do link)',
     rpt_issued: 'Emitido em:',
     rpt_summary: 'Resumo consolidado',
     rpt_6m: '6 meses',
@@ -102,9 +106,13 @@ export const I18N = {
   en: {
     rpt_eyebrow: 'Clinical follow-up report',
     rpt_title: 'Migraine Attack Diary',
-    rpt_subtitle: 'Six-month summary and current-month detail, with physiological data captured by the smartwatch.',
+    rpt_subtitle: 'Six-month summary and selected-month detail, with physiological data captured by the smartwatch.',
     rpt_period: 'Period:',
     rpt_focus_month: 'Focus month:',
+    rpt_in_progress: '(month in progress)',
+    bar_month_label: 'Report month:',
+    bar_in_progress: 'in progress',
+    bar_dropped: 'older months omitted (link size limit)',
     rpt_issued: 'Issued on:',
     rpt_summary: 'Consolidated summary',
     rpt_6m: '6 months',
@@ -261,10 +269,14 @@ function episodeTable(d, T) {
 }
 
 // ---- Página 1: resumo de 6 meses + tabela de episódios ----
-function renderPagina1(d, T, lang) {
+function renderPagina1(d, T, lang, inProgress) {
   const c = d.consolidado6m
   const periodoLabel = (d.periodo.de.label || '') + ' – ' + (d.periodo.ate.label || '') + ' ' + (d.periodo.ate.year || '')
   const mesFocoLabel = (d.periodo.mesFoco.label || '') + ' / ' + d.periodo.mesFoco.year
+
+  // O mês corrente é sempre parcial — dizer isso no cabeçalho evita que um mês pela metade
+  // seja lido como mês fechado na consulta.
+  const focoProgresso = inProgress ? ' <span class="mprog">' + T.rpt_in_progress + '</span>' : ''
 
   const kpis = [
     [T.rpt_total, String(c.totalCrises), 'num'],
@@ -315,7 +327,7 @@ function renderPagina1(d, T, lang) {
       '<div class="masthead">' +
         '<div><p class="eyebrow">' + T.rpt_eyebrow + '</p>' +
         '<h1>' + T.rpt_title + '<span class="sub">' + T.rpt_subtitle + '</span></h1></div>' +
-        '<div class="meta" style="flex:none;white-space:nowrap"><b>' + esc(d.paciente.nome || '—') + '</b><br>' + T.rpt_period + ' ' + esc(periodoLabel) + '<br>' + T.rpt_focus_month + ' <b>' + esc(mesFocoLabel) + '</b><br>' + T.rpt_issued + ' ' + fmtDate(d.geradoEm) + '</div>' +
+        '<div class="meta" style="flex:none;white-space:nowrap"><b>' + esc(d.paciente.nome || '—') + '</b><br>' + T.rpt_period + ' ' + esc(periodoLabel) + '<br>' + T.rpt_focus_month + ' <b>' + esc(mesFocoLabel) + '</b>' + focoProgresso + '<br>' + T.rpt_issued + ' ' + fmtDate(d.geradoEm) + '</div>' +
       '</div>' +
       '<div class="sec" style="margin-top:22px;">' +
         '<div class="sec-head"><h2>' + T.rpt_summary + '</h2><div class="rule"></div><span class="tag">' + T.rpt_6m + '</span></div>' +
@@ -499,7 +511,59 @@ function renderPagina2(d, T) {
   )
 }
 
-export function renderReport(data) {
+// ---- Seletor de mês (payload v2: vários relatórios num único #fragment) ----
+
+// Descreve os meses do payload para a barra. Não invento campo novo no transporte: rótulo e
+// ano saem do próprio relatório do mês (já no idioma certo) e a contagem, das tuplas de crise.
+export function selectableMonths(data) {
+  if (!data || data.v !== 2 || !data.months || !Array.isArray(data.order)) return []
+  return data.order.map((key) => {
+    const r = data.months[key] || {}
+    const mf = (r.periodo && r.periodo.mesFoco) || {}
+    const foco = r.mesFoco || {}
+    const crises = Array.isArray(foco.crisesT) ? foco.crisesT : (Array.isArray(foco.crises) ? foco.crises : [])
+    return {
+      key,
+      year: mf.year,
+      month: mf.month,
+      label: mf.label || '',
+      crises: crises.length,
+      current: key === data.current,
+    }
+  })
+}
+
+// Abre no último mês FECHADO: relatório é documento fechado e o mês corrente é sempre parcial.
+// Sem mês fechado no payload, abre no corrente. Link antigo (um mês só) → null, sem barra.
+export function defaultMonthKey(data) {
+  const months = selectableMonths(data)
+  if (!months.length) return null
+  const fechados = months.filter((m) => !m.current)
+  return fechados.length ? fechados[0].key : months[0].key
+}
+
+// Barra de meses: vive FORA do documento (.doc) para não sujar o relatório impresso, e some
+// no @media print. Cada pílula é um <button> com data-month — quem escuta o clique é a página.
+export function renderMonthBar(months, selectedKey, T, dropped) {
+  const list = Array.isArray(months) ? months : []
+  const omitidos = dropped > 0
+  if (!list.length) return ''
+  if (list.length < 2 && !omitidos) return '' // um mês só: não há escolha a oferecer
+  const pills = list.map((m) => {
+    const partes = []
+    if (m.crises) partes.push(String(m.crises))
+    if (m.current) partes.push(T.bar_in_progress)
+    const sufixo = partes.length ? ' · ' + partes.join(' · ') : ''
+    const rotulo = (m.label || '') + ' ' + (m.year || '') + sufixo
+    const sel = m.key === selectedKey
+    return '<button type="button" class="mpill' + (sel ? ' sel' : '') + '" data-month="' + esc(m.key) + '"' +
+      (sel ? ' aria-current="true"' : '') + '>' + esc(rotulo) + '</button>'
+  }).join('')
+  const nota = omitidos ? '<span class="mnote">' + T.bar_dropped + '</span>' : ''
+  return '<span class="mlabel">' + T.bar_month_label + '</span>' + pills + nota
+}
+
+export function renderReport(data, opts) {
   const d = Object.assign({}, unpackReport(data || {}))
   d.paciente = d.paciente || {}
   d.periodo = d.periodo || { de: {}, ate: {}, mesFoco: {} }
@@ -507,5 +571,5 @@ export function renderReport(data) {
   d.mesFoco = d.mesFoco || { crises: [], sintomas: [], medicacoes: [], horarios: { manha: 0, tarde: 0, noite: 0 } }
   const lang = pickLang(data)
   const T = I18N[lang]
-  return renderPagina1(d, T, lang) + renderPagina2(d, T)
+  return renderPagina1(d, T, lang, !!(opts && opts.inProgress)) + renderPagina2(d, T)
 }
